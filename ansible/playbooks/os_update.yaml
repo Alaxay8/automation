@@ -1,0 +1,20 @@
+---
+- name: update system
+  hosts: all
+  become: true
+
+  tasks:
+    - name: update with APT
+      apt:
+        update_cache: yes
+        upgrade: dist
+        autoremove: yes
+      when: ansible_os_family == "Debian"
+
+    - name: update with dnf
+      dnf:
+        name: "*"
+        state: latest
+        update_cache: yes
+      when: ansible_os_family == "RedHat"
+

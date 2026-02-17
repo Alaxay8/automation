@@ -1,0 +1,10 @@
+[Unit]
+Description="dadada"
+After=network.target
+
+[Service]
+ExecStart=/usr/bin/echo "Hello, World!"
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
