@@ -1,0 +1,8 @@
+[Mount]
+What=/dev/sda1
+Where=/mnt/test
+Type=ext4
+Options=rw,relatime
+
+[Install]
+WantedBy=multi-user.target

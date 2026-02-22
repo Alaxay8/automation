@@ -1,0 +1,11 @@
+[Unit]
+Description=Run test job daily
+
+[Timer]
+OnCalendar=daily
+AccuracySec=10s
+Persistent=true
+Unit=test.service
+
+[Install]
+WantedBy=timers.target
