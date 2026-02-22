@@ -1,0 +1,141 @@
+---
+- name: Bootstrap base OS config
+  hosts: all
+  become: true
+  gather_facts: true
+
+  vars:
+    bootstrap_users:
+      - name: devops
+        groups: ["wheel"]       
+        shell: /bin/bash
+        sudo_nopasswd: true
+        authorized_keys:
+          - "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAI... your_key_here"
+
+      - name: support
+        groups: ["wheel"]
+        shell: /bin/bash
+        sudo_nopasswd: false
+        authorized_keys: []
+
+    ssh_disable_password_auth: true
+    ssh_disable_root_login: true
+
+  pre_tasks:
+    - name: Show target OS
+      debug:
+        msg: "OS={{ ansible_distribution }} {{ ansible_distribution_version }} | Family={{ ansible_os_family }}"
+
+  tasks:
+
+    - name: Set hostname = inventory name
+      ansible.builtin.hostname:
+        name: "{{ inventory_hostname }}"
+      when: inventory_hostname is defined
+
+    - name: Ensure /etc/hosts has hostname mapping
+      ansible.builtin.lineinfile:
+        path: /etc/hosts
+        regexp: '^127\.0\.1\.1\s+'
+        line: "127.0.1.1 {{ inventory_hostname }}"
+        create: true
+
+    - name: Update packages (RHEL/Amazon Linux via dnf/yum)
+      ansible.builtin.package:
+        name: "*"
+        state: latest
+      when: ansible_os_family in ["RedHat", "Rocky", "Amazon"]
+
+    - name: Update packages (Debian/Ubuntu via apt)
+      ansible.builtin.apt:
+        update_cache: true
+        upgrade: dist
+      when: ansible_os_family == "Debian"
+
+    - name: Install baseline packages
+      ansible.builtin.package:
+        name:
+          - vim
+          - git
+          - curl
+          - wget
+          - htop
+          - chrony
+        state: present
+
+    - name: Ensure groups exist (from bootstrap_users)
+      ansible.builtin.group:
+        name: "{{ item }}"
+        state: present
+      loop: "{{ bootstrap_users | map(attribute='groups') | list | flatten | unique }}"
+
+    - name: Create users
+      ansible.builtin.user:
+        name: "{{ item.name }}"
+        shell: "{{ item.shell | default('/bin/bash') }}"
+        groups: "{{ item.groups | default([]) }}"
+        append: true
+        create_home: true
+        state: present
+      loop: "{{ bootstrap_users }}"
+
+    - name: Add authorized_keys for users
+      ansible.posix.authorized_key:
+        user: "{{ item.0.name }}"
+        key: "{{ item.1 }}"
+        state: present
+      loop: "{{ bootstrap_users | subelements('authorized_keys', skip_missing=True) }}"
+      when: item.1 is defined and item.1 | length > 0
+
+    - name: Ensure sudo package present (Debian name differs)
+      ansible.builtin.package:
+        name: "{{ 'sudo' }}"
+        state: present
+
+    - name: Configure sudoers for users (NOPASSWD if enabled)
+      ansible.builtin.copy:
+        dest: "/etc/sudoers.d/{{ item.name }}"
+        content: |
+          {{ item.name }} ALL=(ALL) {{ 'NOPASSWD:' if (item.sudo_nopasswd | default(false)) else '' }}ALL
+        owner: root
+        group: root
+        mode: "0440"
+      loop: "{{ bootstrap_users }}"
+      when: item.groups is defined and ('wheel' in item.groups or 'sudo' in item.groups)
+
+    - name: Disable PasswordAuthentication in sshd_config
+      ansible.builtin.lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^(#\s*)?PasswordAuthentication\s+'
+        line: "PasswordAuthentication no"
+        validate: "sshd -t -f %s"
+      when: ssh_disable_password_auth | bool
+      notify: restart ssh
+
+    - name: Disable root login in sshd_config
+      ansible.builtin.lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^(#\s*)?PermitRootLogin\s+'
+        line: "PermitRootLogin no"
+        validate: "sshd -t -f %s"
+      when: ssh_disable_root_login | bool
+      notify: restart ssh
+
+    - name: Ensure SSH service enabled and running
+      ansible.builtin.service:
+        name: "{{ 'sshd' if ansible_os_family in ['RedHat', 'Amazon'] else 'ssh' }}"
+        state: started
+        enabled: true
+
+    - name: Enable and start chrony
+      ansible.builtin.service:
+        name: "{{ 'chronyd' if ansible_os_family in ['RedHat', 'Amazon'] else 'chrony' }}"
+        state: started
+        enabled: true
+
+  handlers:
+    - name: restart ssh
+      ansible.builtin.service:
+        name: "{{ 'sshd' if ansible_os_family in ['RedHat', 'Amazon'] else 'ssh' }}"
+        state: restarted
