@@ -1,0 +1,119 @@
+#################################################
+# 🔐 SECRETS / KEYS
+#################################################
+
+# Env files
+.env
+.env.*
+*.env
+
+# SSH / TLS keys
+*.pem
+*.key
+*.crt
+*.csr
+*.p12
+*.pfx
+
+id_rsa
+id_rsa.pub
+id_ed25519
+id_ed25519.pub
+id_*
+
+# Vault / secret files
+*.vault
+secrets.*
+secret.*
+*.secret
+
+
+#################################################
+# 🔧 TERRAFORM
+#################################################
+
+**/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+*.tfvars.json
+
+# Override files
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# CLI config
+terraform.rc
+.terraformrc
+
+# Crash logs
+crash.log
+*.log
+
+# Lock file — обычно НЕ игнорируют
+# .terraform.lock.hcl
+
+
+#################################################
+# 🤖 ANSIBLE
+#################################################
+
+# Galaxy dependencies (если скачанные)
+ansible/collections/
+ansible/roles/
+
+# Retry files
+*.retry
+
+# Fact cache
+*.cache
+facts.d/
+
+# Vault password files
+.vault_pass
+.vault_password
+
+
+#################################################
+# 📝 TEMP / BACKUPS
+#################################################
+
+*.tmp
+*.temp
+*.bak
+*.orig
+
+
+#################################################
+# ✏️ EDITOR BACKUPS
+#################################################
+
+*~
+*.swp
+*.swo
+*.un~
+
+
+#################################################
+# 🍎 macOS
+#################################################
+
+.DS_Store
+
+
+#################################################
+# 🪟 WINDOWS
+#################################################
+
+Thumbs.db
+
+
+#################################################
+# 🧰 IDE / TOOLING
+#################################################
+
+.vscode/
+.idea/
+*.iml
