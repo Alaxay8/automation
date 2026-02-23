@@ -41,17 +41,12 @@ module "compute" {
   instance_name_prefix   = "test-amazon"
 }
 
-locals {
-  repo_root      = abspath("${path.module}/../../..")
-  inventory_path = "${local.repo_root}/ansible/test-amazon-inventory.yaml"
-}
+module "inventory" {
+  source = "../../module/inventory"
 
-resource "local_file" "ansible_inventory" {
-  filename = local.inventory_path
-
-  content = templatefile("${path.module}/inventory.tmpl", {
-    all_public_ips = module.compute.public_ips
-  })
+  inventory_path = abspath("${path.module}/../../../ansible/test-amazon-inventory.yaml")
+  all_public_ips = module.compute.public_ips
+  host_prefix    = "test-amazon"
 }
 
 
